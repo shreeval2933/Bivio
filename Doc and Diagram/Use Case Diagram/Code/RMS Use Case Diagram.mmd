@@ -1,0 +1,119 @@
+flowchart LR
+
+%%================ Actors ================
+
+Candidate(("Candidate"))
+Recruiter(("Recruiter"))
+Admin(("Admin"))
+
+%%=============== System =================
+
+subgraph Axon["RMS Use Case Diagram"]
+
+%% Candidate
+
+UC_Register(["Register / Login"])
+UC_Profile(["Create Candidate Profile"])
+UC_Portfolio(["Create Freelance Portfolio"])
+UC_Resume(["Upload Resume"])
+UC_Dashboard(["View Dashboard"])
+UC_Browse(["Browse Jobs"])
+UC_Apply(["Apply for Job"])
+UC_Status(["Track Application Status"])
+UC_Invite(["Receive Job Invitation"])
+UC_Offer(["Accept / Reject Offer"])
+UC_Work(["Submit Milestone"])
+UC_Payment(["Receive Payment"])
+UC_Review(["Receive Review"])
+UC_Chat(["Project Chat"])
+
+%% Recruiter
+
+UC_RDashboard(["Recruiter Dashboard"])
+UC_ViewJD(["View Job Listings"])
+UC_CreateFT(["Create Full-Time JD"])
+UC_CreateFL(["Create Freelance JD"])
+UC_AIWeight(["Configure AI Weightage"])
+UC_AI(["View AI Ranked Candidates"])
+UC_InviteCandidate(["Invite Candidates"])
+UC_ViewApplicants(["View Applicants"])
+UC_Hire(["Hire Candidate"])
+UC_Movement(["Track Candidate Movement"])
+UC_Proposal(["Review Proposals"])
+UC_Escrow(["Deposit Escrow"])
+UC_Milestone(["Manage Milestones"])
+UC_Approve(["Approve Work"])
+UC_Release(["Release Payment"])
+UC_GiveReview(["Submit Review"])
+
+%% Admin
+
+UC_AdminDash(["Admin Dashboard"])
+UC_Config(["Platform Configuration"])
+UC_Moderate(["Manage Users"])
+UC_Dispute(["Resolve Disputes"])
+UC_Manual(["Manual Fund Release"])
+UC_Finance(["View Platform Financials"])
+
+end
+
+%%================ Candidate ================
+
+Candidate --- UC_Register
+Candidate --- UC_Profile
+Candidate --- UC_Portfolio
+Candidate --- UC_Resume
+Candidate --- UC_Dashboard
+Candidate --- UC_Browse
+Candidate --- UC_Apply
+Candidate --- UC_Status
+Candidate --- UC_Invite
+Candidate --- UC_Offer
+Candidate --- UC_Work
+Candidate --- UC_Payment
+Candidate --- UC_Review
+Candidate --- UC_Chat
+
+%%================ Recruiter ================
+
+Recruiter --- UC_RDashboard
+Recruiter --- UC_ViewJD
+Recruiter --- UC_CreateFT
+Recruiter --- UC_CreateFL
+Recruiter --- UC_AIWeight
+Recruiter --- UC_AI
+Recruiter --- UC_InviteCandidate
+Recruiter --- UC_ViewApplicants
+Recruiter --- UC_Hire
+Recruiter --- UC_Movement
+Recruiter --- UC_Proposal
+Recruiter --- UC_Escrow
+Recruiter --- UC_Milestone
+Recruiter --- UC_Approve
+Recruiter --- UC_Release
+Recruiter --- UC_GiveReview
+Recruiter --- UC_Chat
+
+%%================ Admin ================
+
+Admin --- UC_AdminDash
+Admin --- UC_Config
+Admin --- UC_Moderate
+Admin --- UC_Dispute
+Admin --- UC_Manual
+Admin --- UC_Finance
+
+%%============== Relationships ==============
+
+UC_Work -. "<< include >>" .-> UC_Chat
+UC_Approve -. "<< include >>" .-> UC_Chat
+
+UC_Proposal -. "<< include >>" .-> UC_Escrow
+
+UC_Release -. "<< include >>" .-> UC_Approve
+
+UC_Hire -. "<< include >>" .-> UC_Movement
+
+UC_Apply -. "<< include >>" .-> UC_Status                                                 
+
+UC_Dispute -. "<< extend >>" .-> UC_Release                

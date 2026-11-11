@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor Candidate
+    actor Recruiter
+    actor Admin
+    participant RMS
+    participant DB
+
+    Candidate->>RMS: Raise Dispute
+    RMS->>DB: Store Dispute
+
+    Admin->>RMS: View Dispute
+    RMS->>DB: Fetch Details
+    DB-->>Admin: Dispute Information
+
+    Admin->>Candidate: Request Evidence
+    Candidate-->>Admin: Submit Evidence
+
+    Admin->>Recruiter: Request Response
+    Recruiter-->>Admin: Submit Response
+
+    Admin->>RMS: Resolve Dispute
+    RMS->>DB: Update Status
+
+    alt Refund Required
+        RMS->>Candidate: Refund Payment
+    else Release Payment
+        RMS->>Recruiter: Close Dispute
+    end

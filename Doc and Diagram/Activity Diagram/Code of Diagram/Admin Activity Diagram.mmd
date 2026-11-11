@@ -1,0 +1,61 @@
+flowchart TD
+
+Start((Start))
+
+A[Login]
+
+B[Open Admin Dashboard]
+
+C{Select Operation}
+
+D[Manage Users]
+
+E[Configure Platform]
+
+F[View Platform Analytics]
+
+G[Monitor Financials]
+
+H{Dispute Raised?}
+
+I[Review Dispute]
+
+J[Communicate with Candidate & Recruiter]
+
+K{Valid Dispute?}
+
+L[Manual Fund Release]
+
+M[Reject Dispute]
+
+N[Close Dispute]
+
+End((End))
+
+Start --> A
+
+A --> B
+
+B --> C
+
+C --> D
+C --> E
+C --> F
+C --> G
+C --> H
+
+H -- No --> End
+
+H -- Yes --> I
+
+I --> J
+
+J --> K
+
+K -- Yes --> L
+L --> N
+
+K -- No --> M
+M --> N
+
+N --> End

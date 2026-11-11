@@ -1,0 +1,33 @@
+sequenceDiagram
+    actor Recruiter
+    participant UI as RMS Portal
+    participant RMS as Recruitment Service
+    participant AI as AI Matching Engine
+    participant DB as Database
+    actor Candidate
+
+    Recruiter->>UI: Login
+
+    Recruiter->>UI: Create Job Description
+    UI->>RMS: Save Job
+    RMS->>DB: Store JD
+    DB-->>RMS: Success
+
+    Recruiter->>UI: Configure AI Weightage
+    UI->>AI: Calculate Candidate Ranking
+    AI->>DB: Fetch Candidates
+    DB-->>AI: Candidate Data
+    AI-->>UI: Ranked Candidates
+
+    Recruiter->>UI: Invite Candidate
+    UI->>RMS: Send Invitation
+    RMS->>DB: Store Invitation
+
+    Candidate->>UI: Accept Invitation
+
+    Recruiter->>UI: Hire Candidate
+    UI->>RMS: Update Hiring Status
+    RMS->>DB: Save Hiring Details
+    DB-->>RMS: Success
+
+    RMS-->>Candidate: Offer Letter

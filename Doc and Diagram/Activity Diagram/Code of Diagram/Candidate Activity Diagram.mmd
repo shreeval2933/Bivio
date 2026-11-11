@@ -1,0 +1,80 @@
+flowchart TD
+
+Start((Start))
+
+A[Register / Login]
+
+B{Profile Exists?}
+
+C[Create / Update Candidate Profile]
+
+D[Upload Resume]
+
+E[Create Freelance Portfolio]
+
+F[View Dashboard]
+
+G{Select Opportunity}
+
+H[Browse Full-Time Jobs]
+
+I[Browse Freelance Projects]
+
+J[Apply for Job]
+
+K[Submit Proposal]
+
+L[Wait for Recruiter Response]
+
+M{Selected?}
+
+N[Accept Offer]
+
+O[Reject Offer]
+
+P[Project Chat]
+
+Q[Submit Milestone]
+
+R[Receive Payment]
+
+S[Receive Review]
+
+T((End))
+
+Start --> A
+A --> B
+
+B -- No --> C
+B -- Yes --> F
+
+C --> D
+D --> E
+E --> F
+
+F --> G
+
+G -- Full-Time --> H
+H --> J
+
+G -- Freelance --> I
+I --> K
+
+J --> L
+K --> L
+
+L --> M
+
+M -- No --> T
+
+M -- Yes --> N
+
+M -- Reject --> O
+
+N --> P
+P --> Q
+Q --> R
+R --> S
+S --> T
+
+O --> T

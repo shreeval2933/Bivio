@@ -1,0 +1,81 @@
+flowchart TD
+
+Start((Start))
+
+A[Login]
+
+B[Open Dashboard]
+
+C{Choose Hiring Type}
+
+D[Create Full-Time JD]
+
+E[Create Freelance JD]
+
+F[Configure AI Weightage]
+
+G[Publish Job]
+
+H[View AI Ranked Candidates]
+
+I[View Applicants / Proposals]
+
+J{Shortlist Candidate?}
+
+K[Reject Candidate]
+
+L[Invite / Hire Candidate]
+
+M{Freelance Project?}
+
+N[Accept Proposal]
+
+O[Deposit Escrow]
+
+P[Manage Milestones]
+
+Q[Project Chat]
+
+R[Approve Work]
+
+S[Release Payment]
+
+T[Submit Review]
+
+End((End))
+
+Start --> A
+A --> B
+B --> C
+
+C -- Full-Time --> D
+C -- Freelance --> E
+
+D --> F
+E --> F
+
+F --> G
+
+G --> H
+
+H --> I
+
+I --> J
+
+J -- No --> K
+K --> End
+
+J -- Yes --> L
+
+L --> M
+
+M -- Yes --> N
+N --> O
+O --> P
+P --> Q
+Q --> R
+R --> S
+S --> T
+T --> End
+
+M -- No --> End

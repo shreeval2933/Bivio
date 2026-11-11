@@ -1,0 +1,1775 @@
+{
+  "info": {
+    "_postman_id": "bivio-api-collection-id-v2",
+    "name": "Bivio API Collection",
+    "description": "Comprehensive Postman Collection for Bivio Backend API endpoints. Auto-updated to reflect all routes (implemented and stubs).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth & Identity",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"CANDIDATE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"token\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"verification-token-string\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-email"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-string\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-password"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List Public Jobs (Filterable)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs?jobType=FULL_TIME&search=engineer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"],
+              "query": [
+                { "key": "jobType", "value": "FULL_TIME" },
+                { "key": "search", "value": "engineer" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Job by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id"],
+              "variable": [
+                { "key": "id", "value": "job-uuid-here" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Recruiter's Own Jobs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/recruiter/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recruiter", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "Create Job Draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Backend Engineer\",\n  \"description\": \"Awesome Node.js backend development role.\",\n  \"jobType\": \"FULL_TIME\",\n  \"skillIds\": [\"skill-uuid-1\"],\n  \"salaryMin\": 800000,\n  \"salaryMax\": 1200000,\n  \"minExperienceYears\": 2,\n  \"minEducationLevel\": \"ANY\",\n  \"employmentType\": \"FULL_TIME\",\n  \"experienceLevel\": \"MID\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs"]
+            }
+          }
+        },
+        {
+          "name": "Edit Job Basics",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Job Title\",\n  \"description\": \"New description with at least twenty characters.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/basics",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "basics"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Edit Job Requirements",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minExperienceYears\": 3,\n  \"minEducationLevel\": \"BACHELORS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/requirements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "requirements"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Edit Job Compensation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"salaryMin\": 900000,\n  \"salaryMax\": 1300000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/compensation",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "compensation"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Edit Job Benefits",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"benefits\": [\"Health Insurance\", \"Remote Friendly\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/benefits",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "benefits"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Extend Job Deadline",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deadline\": \"2026-12-31T23:59:59Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/deadline",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "deadline"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Configure Hiring Stages",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stages\": [\n    { \"name\": \"Screening\", \"stageType\": \"SCREENING\", \"orderIndex\": 0 },\n    { \"name\": \"Technical Interview\", \"stageType\": \"INTERVIEW\", \"orderIndex\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/stages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "stages"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Configure AI Weightage",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skillWeight\": 30,\n  \"experienceWeight\": 20,\n  \"educationWeight\": 10,\n  \"domainWeight\": 10,\n  \"practicalFitWeight\": 10,\n  \"portfolioWeight\": 10,\n  \"rateFitWeight\": 5,\n  \"trackRecordWeight\": 5,\n  \"availabilityWeight\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/weightage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "weightage"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Publish Job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "publish"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Close Job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/close",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "close"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Reopen Job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/reopen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "reopen"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Cancel Job",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "cancel"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Duplicate Job Draft",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/duplicate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "duplicate"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profiles",
+      "item": [
+        {
+          "name": "Get Candidate Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Recruiter Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/recruiters/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recruiters", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Skills Directory",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "skills"]
+            }
+          }
+        },
+        {
+          "name": "Confirm Recruiter Posting Fee",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentGatewayRef\": \"gateway-payment-reference\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/recruiters/me/posting-fee/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recruiters", "me", "posting-fee", "confirm"]
+            }
+          }
+        },
+        {
+          "name": "Update Candidate Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"New Bio Text\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me"]
+            }
+          }
+        },
+        {
+          "name": "Upload Resume",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "resume", "type": "file", "src": [] }]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/resumes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "resumes"]
+            }
+          }
+        },
+        {
+          "name": "Set Primary Resume",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/resumes/:id/primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "resumes", ":id", "primary"],
+              "variable": [{ "key": "id", "value": "resume-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Save Candidate Skills",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skills\": [{ \"skillId\": \"skill-uuid\", \"proficiency\": 5 }]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/skills",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "skills"]
+            }
+          }
+        },
+        {
+          "name": "Save Work Experience",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"experiences\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/work-experience",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "work-experience"]
+            }
+          }
+        },
+        {
+          "name": "Save Education",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"education\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/education",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "education"]
+            }
+          }
+        },
+        {
+          "name": "Save Certifications",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"certifications\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/certifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "certifications"]
+            }
+          }
+        },
+        {
+          "name": "Save Languages",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"languages\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/languages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "languages"]
+            }
+          }
+        },
+        {
+          "name": "Get Freelance Portfolio",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio"]
+            }
+          }
+        },
+        {
+          "name": "Save Freelance Portfolio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hourlyRate\": 50,\n  \"githubUrl\": \"https://github.com/\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio"]
+            }
+          }
+        },
+        {
+          "name": "Add Portfolio Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Project Name\",\n  \"description\": \"Project Description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio", "projects"]
+            }
+          }
+        },
+        {
+          "name": "Update Portfolio Project",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Project Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio/projects/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio", "projects", ":id"],
+              "variable": [{ "key": "id", "value": "project-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Delete Portfolio Project",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio/projects/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio", "projects", ":id"],
+              "variable": [{ "key": "id", "value": "project-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Add Freelance Service",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"Web Development\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio/services",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio", "services"]
+            }
+          }
+        },
+        {
+          "name": "Update Freelance Service",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceName\": \"Updated Web Development\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/candidates/me/portfolio/services/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "candidates", "me", "portfolio", "services", ":id"],
+              "variable": [{ "key": "id", "value": "service-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Update Recruiter Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Recruiter\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/recruiters/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recruiters", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Company Details",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"New Comp Inc\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/recruiters/me/company",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recruiters", "me", "company"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Matching",
+      "item": [
+        {
+          "name": "Get Candidates for Job (Match Scores)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/candidates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "candidates"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Compute Match Scores",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jobId\": \"job-uuid-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/match-scores/compute",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "match-scores", "compute"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hiring Pipeline",
+      "item": [
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Get Application Details",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", ":id"],
+              "variable": [{ "key": "id", "value": "application-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Apply for Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resumeId\": \"resume-uuid\",\n  \"coverLetter\": \"Optional Cover Letter\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/apply",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "apply"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Application",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/:id/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", ":id", "withdraw"],
+              "variable": [{ "key": "id", "value": "application-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Move Application Stage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stageId\": \"stage-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/:id/stage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", ":id", "stage"],
+              "variable": [{ "key": "id", "value": "application-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Bulk Move Stages",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationIds\": [\"app-1\", \"app-2\"],\n  \"stageId\": \"stage-uuid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/bulk-stage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "bulk-stage"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Reject Applications",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationIds\": [\"app-1\", \"app-2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/bulk-reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "bulk-reject"]
+            }
+          }
+        },
+        {
+          "name": "List Invitations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/invitations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invitations"]
+            }
+          }
+        },
+        {
+          "name": "Send Invitation to Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidateId\": \"candidate-uuid-here\",\n  \"message\": \"Invitation message\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/invitations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "invitations"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Respond to Invitation",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"ACCEPTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invitations/:id/respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invitations", ":id", "respond"],
+              "variable": [{ "key": "id", "value": "invitation-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "List Offers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers"]
+            }
+          }
+        },
+        {
+          "name": "Create Job Offer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"compensation\": 1200000,\n  \"startDate\": \"2026-09-01T00:00:00Z\",\n  \"details\": \"Offer Details\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/:id/offer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", ":id", "offer"],
+              "variable": [{ "key": "id", "value": "application-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Respond to Offer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"ACCEPTED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/:id/respond",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", ":id", "respond"],
+              "variable": [{ "key": "id", "value": "offer-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Offer",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/offers/:id/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "offers", ":id", "withdraw"],
+              "variable": [{ "key": "id", "value": "offer-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "List Interviews",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interviews"]
+            }
+          }
+        },
+        {
+          "name": "Schedule Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledAt\": \"2026-08-10T14:00:00Z\",\n  \"mode\": \"ONLINE\",\n  \"meetingLink\": \"https://meet.google.com/abc-defg-hij\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/:id/interviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", ":id", "interviews"],
+              "variable": [{ "key": "id", "value": "application-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Reschedule Interview",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledAt\": \"2026-08-12T15:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/:id/reschedule",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interviews", ":id", "reschedule"],
+              "variable": [{ "key": "id", "value": "interview-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Submit Interview Feedback",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"recommendation\": \"PROCEED\",\n  \"notes\": \"Strong technical performance\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/:id/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interviews", ":id", "feedback"],
+              "variable": [{ "key": "id", "value": "interview-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Cancel Interview",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/interviews/:id/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "interviews", ":id", "cancel"],
+              "variable": [{ "key": "id", "value": "interview-uuid" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Freelance",
+      "item": [
+        {
+          "name": "List Proposals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals"]
+            }
+          }
+        },
+        {
+          "name": "Submit Proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bidAmount\": 15000,\n  \"estimatedDays\": 10,\n  \"coverLetter\": \"I can build this easily.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/jobs/:id/proposals",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "jobs", ":id", "proposals"],
+              "variable": [{ "key": "id", "value": "job-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Shortlist Proposal",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals/:id/shortlist",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals", ":id", "shortlist"],
+              "variable": [{ "key": "id", "value": "proposal-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Reject Proposal",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals/:id/reject",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals", ":id", "reject"],
+              "variable": [{ "key": "id", "value": "proposal-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Proposal",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals/:id/withdraw",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals", ":id", "withdraw"],
+              "variable": [{ "key": "id", "value": "proposal-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Accept Proposal (Lock escrow)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/proposals/:id/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals", ":id", "accept"],
+              "variable": [{ "key": "id", "value": "proposal-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "List Contracts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts"]
+            }
+          }
+        },
+        {
+          "name": "Get Contract by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", ":id"],
+              "variable": [{ "key": "id", "value": "contract-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Fund Milestone",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones/:id/fund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones", ":id", "fund"],
+              "variable": [{ "key": "id", "value": "milestone-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Submit Milestone Work",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workDetails\": \"Completed landing page task\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones/:id/submit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones", ":id", "submit"],
+              "variable": [{ "key": "id", "value": "milestone-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Approve Milestone (Release escrow)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones/:id/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones", ":id", "approve"],
+              "variable": [{ "key": "id", "value": "milestone-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Request Milestone Revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Please fix responsiveness\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones/:id/request-revision",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones", ":id", "request-revision"],
+              "variable": [{ "key": "id", "value": "milestone-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "File Milestone Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Freelancer did not submit correct source code\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/milestones/:id/dispute",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "milestones", ":id", "dispute"],
+              "variable": [{ "key": "id", "value": "milestone-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Post Contract Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Amazing speed and quality work!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/:id/reviews",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "contracts", ":id", "reviews"],
+              "variable": [{ "key": "id", "value": "contract-uuid" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get Wallet Info",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet"]
+            }
+          }
+        },
+        {
+          "name": "Get Wallet Transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallet/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallet", "transactions"]
+            }
+          }
+        },
+        {
+          "name": "Request Payout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"method\": \"BANK_TRANSFER\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payouts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payouts"]
+            }
+          }
+        },
+        {
+          "name": "Retry Payout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/payouts/:id/retry",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payouts", ":id", "retry"],
+              "variable": [{ "key": "id", "value": "payout-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Payment Webhook",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/payment",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "payment"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messaging",
+      "item": [
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:id/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", ":id", "read"],
+              "variable": [{ "key": "id", "value": "notification-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "read-all"]
+            }
+          }
+        },
+        {
+          "name": "Delete Notifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationIds\": [\"noti-1\", \"noti-2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/delete",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "delete"]
+            }
+          }
+        },
+        {
+          "name": "List Chat Rooms",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/rooms",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "rooms"]
+            }
+          }
+        },
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/rooms/:id/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "rooms", ":id", "messages"],
+              "variable": [{ "key": "id", "value": "room-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Send Chat Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Hello team!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/rooms/:id/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "rooms", ":id", "messages"],
+              "variable": [{ "key": "id", "value": "room-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Mark Chat Room Read",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/chat/rooms/:id/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chat", "rooms", ":id", "read"],
+              "variable": [{ "key": "id", "value": "room-uuid" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Admin Disputes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "disputes"]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Users List",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Financials",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/financials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "financials"]
+            }
+          }
+        },
+        {
+          "name": "Get Admin Settings",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Admin Setting",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"new-value\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/settings/:key",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "settings", ":key"],
+              "variable": [{ "key": "key", "value": "setting-key-here" }]
+            }
+          }
+        },
+        {
+          "name": "Get Dispute Detail by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "disputes", ":id"],
+              "variable": [{ "key": "id", "value": "dispute-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Assign Dispute to Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes/:id/assign",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "disputes", ":id", "assign"],
+              "variable": [{ "key": "id", "value": "dispute-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Resolve Dispute",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amountToFreelancer\": 10000,\n  \"amountToClient\": 5000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes/:id/resolve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "disputes", ":id", "resolve"],
+              "variable": [{ "key": "id", "value": "dispute-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Escalate Dispute",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/disputes/:id/escalate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "disputes", ":id", "escalate"],
+              "variable": [{ "key": "id", "value": "dispute-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Get User Details by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", ":id"],
+              "variable": [{ "key": "id", "value": "user-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Moderate User Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"SUSPEND\",\n  \"reason\": \"Violation of TOS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/:id/moderate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", ":id", "moderate"],
+              "variable": [{ "key": "id", "value": "user-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "Reset User Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"ResetPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/:id/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", ":id", "reset-password"],
+              "variable": [{ "key": "id", "value": "user-uuid" }]
+            }
+          }
+        },
+        {
+          "name": "List Pending Verifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/verifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "verifications"]
+            }
+          }
+        },
+        {
+          "name": "Process Verification Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verificationId\": \"verification-uuid\",\n  \"status\": \"APPROVED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/verifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "verifications"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

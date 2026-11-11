@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor Candidate
+    participant UI as RMS Web Portal
+    participant Auth as Authentication Service
+    participant RMS as Recruitment Service
+    participant DB as Database
+
+    Candidate->>UI: Register / Login
+    UI->>Auth: Authenticate User
+    Auth->>DB: Validate Credentials
+    DB-->>Auth: Authentication Result
+    Auth-->>UI: Login Success
+
+    Candidate->>UI: Complete Profile
+    UI->>RMS: Save Candidate Profile
+    RMS->>DB: Store Profile
+    DB-->>RMS: Profile Saved
+    RMS-->>UI: Profile Updated
+
+    Candidate->>UI: Upload Resume
+    UI->>RMS: Upload Resume
+    RMS->>DB: Save Resume
+    DB-->>RMS: Resume Stored
+
+    Candidate->>UI: Apply for Job
+    UI->>RMS: Submit Application
+    RMS->>DB: Save Application
+    DB-->>RMS: Application Created
+    RMS-->>UI: Application Submitted
+
+    UI-->>Candidate: Confirmation

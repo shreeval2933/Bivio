@@ -1,0 +1,1374 @@
+// ============================================================================
+// BIVIO — Prisma Schema
+//
+// Generated from BIVIO_FRONTEND_AUDIT.md §2 (reconciled canonical types) plus
+// the OQ-1..OQ-13 decisions. Key decisions baked in here:
+//
+//   OQ-1  Platform posting fee is ONE-TIME per recruiter account, not per job.
+//         JobStatus therefore has no PENDING_PAYMENT state — a job goes
+//         DRAFT -> CONFIGURING -> OPEN directly. RecruiterProfile carries
+//         postingFeePaid as a permanent, one-time flag.
+//   OQ-2  No verification gate on freelance bidding — verification fields
+//         live only on RecruiterProfile (the paying/hiring side), never on
+//         CandidateProfile.
+//   OQ-3  "Force Complete Project" has no backend support — treated as a
+//         debug-only frontend affordance, not modeled here. Flag if wrong.
+//   OQ-4  User.fullName is a single field (no firstName/lastName split).
+//   OQ-10 FreelanceService (freelance profile "Services Offered") is in scope.
+//   OQ-11 Bulk pipeline actions supported (no schema impact — same guarded
+//         per-application transition, just looped by the service layer).
+//   OQ-12 No admin impersonation modeled in v1.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// IDENTITY & PROFILES
+// ═══════════════════════════════════════════════════════════
+
+model User {
+  id            String        @id @default(uuid()) @db.Uuid
+  fullName      String        @map("full_name")
+  email         String        @unique
+  passwordHash  String        @map("password_hash")
+  phone         String?       @unique
+  role          Role
+  profileImage  String?       @map("profile_image_url")
+  isVerified    Boolean       @default(false) @map("is_verified")
+  accountStatus AccountStatus @default(PENDING_VERIFICATION) @map("account_status")
+  lastLoginAt   DateTime?     @map("last_login_at")
+  lastActiveAt  DateTime?     @map("last_active_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  deletedAt     DateTime?     @map("deleted_at")
+
+  candidateProfile CandidateProfile?
+  recruiterProfile RecruiterProfile?
+  adminProfile     AdminProfile?
+  wallet           Wallet?
+  notifications    Notification[]
+  payments         Payment[]
+  chatParticipants ChatParticipant[]
+  messages         Message[]
+  attachments      Attachment[]
+  auditLogs        AuditLog[]
+  stageMovements   StageMovement[]
+  interviews       Interview[]        @relation("Interviewer")
+  reviewsWritten   Review[]           @relation("Reviewer")
+  reviewsReceived  Review[]           @relation("Reviewee")
+  disputesRaised   Dispute[]          @relation("DisputeRaiser")
+  moderationsRecvd ModerationAction[] @relation("ModerationTarget")
+  supportTickets   SupportTicket[]    @relation("UserTickets")
+  ticketsResponded SupportTicket[]    @relation("TicketResponder")
+
+  @@index([email])
+  @@index([role, accountStatus])
+  @@map("users")
+}
+
+model CandidateProfile {
+  id               String        @id @default(uuid()) @db.Uuid
+  userId           String        @unique @map("user_id") @db.Uuid
+  headline         String?
+  summary          String?
+  location         String?
+  experienceYears  Decimal?      @map("experience_years") @db.Decimal(4, 1)
+  highestEducation String?       @map("highest_education")
+  currentStatus    CandidateWorkStatus? @map("current_status")
+  noticePeriod     NoticePeriod? @map("notice_period")
+  primaryResumeId  String?       @map("primary_resume_id") @db.Uuid
+  openToFullTime   Boolean       @default(true) @map("open_to_full_time")
+  openToFreelance  Boolean       @default(false) @map("open_to_freelance")
+  fullTimeFeePaid  Boolean       @default(false) @map("full_time_fee_paid")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolio       FreelancePortfolio?
+  skills          CandidateSkill[]
+  resumes         Resume[]
+  workExperience  WorkExperience[]
+  education       CandidateEducation[]
+  certifications  Certification[]
+  languages       LanguageEntry[]
+  applications    Application[]
+  proposals       Proposal[]
+  invitations     Invitation[]
+  matchScores     MatchScore[]
+  contracts       Contract[]
+
+  @@index([location])
+  @@map("candidate_profiles")
+}
+
+// NEW (audit §2) — repeatable work-history entries on the common profile
+model WorkExperience {
+  id             String    @id @default(uuid()) @db.Uuid
+  candidateId    String    @map("candidate_id") @db.Uuid
+  company        String
+  title          String
+  employmentType WorkEmploymentType @map("employment_type")
+  startDate      DateTime  @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  isCurrent      Boolean   @default(false) @map("is_current")
+  description    String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@map("work_experiences")
+}
+
+// NEW — repeatable education entries
+model CandidateEducation {
+  id           String  @id @default(uuid()) @db.Uuid
+  candidateId  String  @map("candidate_id") @db.Uuid
+  institution  String
+  degree       String
+  fieldOfStudy String  @map("field_of_study")
+  startYear    Int     @map("start_year") @db.SmallInt
+  endYear      Int     @map("end_year") @db.SmallInt
+  grade        String?
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@map("candidate_education")
+}
+
+// NEW — repeatable certifications
+model Certification {
+  id            String    @id @default(uuid()) @db.Uuid
+  candidateId   String    @map("candidate_id") @db.Uuid
+  name          String
+  issuingOrg    String    @map("issuing_org")
+  issueDate     DateTime  @map("issue_date") @db.Date
+  expiryDate    DateTime? @map("expiry_date") @db.Date
+  credentialUrl String?   @map("credential_url")
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@map("certifications")
+}
+
+// NEW — repeatable languages
+model LanguageEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  candidateId String   @map("candidate_id") @db.Uuid
+  language    String
+  fluency     Fluency
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, language])
+  @@map("language_entries")
+}
+
+model FreelancePortfolio {
+  id                  String    @id @default(uuid()) @db.Uuid
+  candidateId         String    @unique @map("candidate_id") @db.Uuid
+  bio                 String?
+  hourlyRate          Decimal?  @map("hourly_rate") @db.Decimal(10, 2)
+  currency            String    @default("INR") @db.VarChar(3)
+  preferredEngagement EngagementType[] @map("preferred_engagement")
+  availableFrom       DateTime? @map("available_from") @db.Date
+  weeklyCapacity      WeeklyCapacity? @map("weekly_capacity")
+  portfolioUrl        String?   @map("portfolio_url")
+  githubUrl           String?   @map("github_url")
+  linkedinUrl         String?   @map("linkedin_url")
+  isAvailable         Boolean   @default(true) @map("is_available")
+  hideEarnings        Boolean   @default(false) @map("hide_earnings")
+  avgRating           Decimal?  @map("avg_rating") @db.Decimal(3, 2)      // denormalized
+  totalContracts      Int       @default(0) @map("total_contracts")        // denormalized
+  totalEarned         Decimal?  @map("total_earned") @db.Decimal(14, 2)    // denormalized
+  responseTimeHours   Decimal?  @map("response_time_hours") @db.Decimal(6, 1)  // denormalized
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  candidate CandidateProfile   @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  projects  PortfolioProject[]
+  services  FreelanceService[]
+
+  @@index([isAvailable, avgRating])
+  @@map("freelance_portfolios")
+}
+
+model PortfolioProject {
+  id               String    @id @default(uuid()) @db.Uuid
+  portfolioId      String    @map("portfolio_id") @db.Uuid
+  title            String
+  description      String?
+  role             String?
+  repositoryUrl    String?   @map("repository_url")
+  liveUrl          String?   @map("live_url")
+  coverImageUrl    String?   @map("cover_image_url")
+  clientName       String?   @map("client_name")
+  clientNamePrivate Boolean  @default(false) @map("client_name_private")
+  startedOn        DateTime? @map("started_on") @db.Date
+  completedOn      DateTime? @map("completed_on") @db.Date
+  displayOrder     Int       @default(0) @map("display_order")
+  isFeatured       Boolean   @default(false) @map("is_featured")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  portfolio FreelancePortfolio      @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  skills    PortfolioProjectSkill[]
+
+  @@index([portfolioId, displayOrder])
+  @@map("portfolio_projects")
+}
+
+// NEW (OQ-10, kept in scope) — productized freelance service offerings
+model FreelanceService {
+  id            String   @id @default(uuid()) @db.Uuid
+  portfolioId   String   @map("portfolio_id") @db.Uuid
+  title         String
+  description   String?
+  startingPrice Decimal  @map("starting_price") @db.Decimal(10, 2)
+  deliveryTime  String   @map("delivery_time")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  portfolio FreelancePortfolio     @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+  skills    FreelanceServiceSkill[]
+
+  @@map("freelance_services")
+}
+
+model FreelanceServiceSkill {
+  id        String @id @default(uuid()) @db.Uuid
+  serviceId String @map("service_id") @db.Uuid
+  skillId   String @map("skill_id") @db.Uuid
+
+  service FreelanceService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  skill   Skill            @relation(fields: [skillId], references: [id])
+
+  @@unique([serviceId, skillId])
+  @@map("freelance_service_skills")
+}
+
+model Company {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  website     String?
+  logoUrl     String?  @map("logo_url")
+  industry    String?
+  description String?
+  isVerified  Boolean  @default(false) @map("is_verified")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  recruiters RecruiterProfile[]
+  jobs       Job[]
+
+  @@map("companies")
+}
+
+model RecruiterProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  userId                String    @unique @map("user_id") @db.Uuid
+  companyId             String?   @map("company_id") @db.Uuid
+  designation           String?
+  isSolo                Boolean   @default(true) @map("is_solo")
+  // OQ-1 — one-time posting fee, checked once, never per-job
+  postingFeePaid        Boolean   @default(false) @map("posting_fee_paid")
+  postingFeePaidAt      DateTime? @map("posting_fee_paid_at")
+  // verification tier — recruiter/client side only, per OQ-2
+  paymentMethodVerified Boolean   @default(false) @map("payment_method_verified")
+  paymentVerifiedAt     DateTime? @map("payment_verified_at")
+  idVerified            Boolean   @default(false) @map("id_verified")
+  idVerifiedAt          DateTime? @map("id_verified_at")
+  kycStatus             KycStatus @default(NOT_STARTED) @map("kyc_status")
+  jobsPostedCount       Int       @default(0) @map("jobs_posted_count")     // denormalized
+  hiresCount            Int       @default(0) @map("hires_count")           // denormalized
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company         Company?           @relation(fields: [companyId], references: [id])
+  jobs            Job[]
+  invitations     Invitation[]
+  contracts       Contract[]
+  kycSubmissions  KycSubmission[]
+
+  @@map("recruiter_profiles")
+}
+
+// NEW — full KYC submission history (RecruiterProfile.kycStatus mirrors the latest)
+model KycSubmission {
+  id                     String    @id @default(uuid()) @db.Uuid
+  recruiterId            String    @map("recruiter_id") @db.Uuid
+  kycType                KycType   @map("kyc_type")
+  nameMatch               Boolean   @default(false) @map("name_match")
+  nameMatchNotes          String?   @map("name_match_notes")
+  status                  KycStatus @default(PENDING)
+  isSecondSubmission      Boolean   @default(false) @map("is_second_submission")
+  rejectionReason         String?   @map("rejection_reason")
+  clarificationRequested  String?   @map("clarification_requested")
+  reviewedByAdminId       String?   @map("reviewed_by_admin_id") @db.Uuid
+  reviewedAt              DateTime? @map("reviewed_at")
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  recruiter RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  @@index([recruiterId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("kyc_submissions")
+}
+
+model AdminProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  permissions Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  disputes          Dispute[]
+  moderationActions ModerationAction[]
+  settings          PlatformSetting[]
+
+  @@map("admin_profiles")
+}
+
+model Resume {
+  id          String   @id @default(uuid()) @db.Uuid
+  candidateId String   @map("candidate_id") @db.Uuid
+  version     Int
+  fileUrl     String   @map("file_url")
+  fileName    String   @map("file_name")
+  mimeType    String   @map("mime_type")
+  sizeBytes   BigInt   @map("size_bytes")
+  parsedText  String?  @map("parsed_text")
+  isPrimary   Boolean  @default(false) @map("is_primary")
+  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+
+  candidate    CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@unique([candidateId, version])
+  @@index([candidateId, isPrimary])
+  @@map("resumes")
+}
+
+model Skill {
+  id         String  @id @default(uuid()) @db.Uuid
+  name       String  @unique
+  category   String?
+  isApproved Boolean @default(true) @map("is_approved")
+
+  candidateSkills CandidateSkill[]
+  jobSkills       JobSkill[]
+  projectSkills   PortfolioProjectSkill[]
+  serviceSkills   FreelanceServiceSkill[]
+
+  @@index([isApproved, name])
+  @@map("skills")
+}
+
+model CandidateSkill {
+  id                String   @id @default(uuid()) @db.Uuid
+  candidateId       String   @map("candidate_id") @db.Uuid
+  skillId           String   @map("skill_id") @db.Uuid
+  proficiency       Int?     @db.SmallInt
+  yearsOfExperience Decimal? @map("years_of_experience") @db.Decimal(4, 1)
+
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  skill     Skill            @relation(fields: [skillId], references: [id])
+
+  @@unique([candidateId, skillId])
+  @@index([skillId])
+  @@map("candidate_skills")
+}
+
+model PortfolioProjectSkill {
+  id        String @id @default(uuid()) @db.Uuid
+  projectId String @map("project_id") @db.Uuid
+  skillId   String @map("skill_id") @db.Uuid
+
+  project PortfolioProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill   Skill            @relation(fields: [skillId], references: [id])
+
+  @@unique([projectId, skillId])
+  @@map("portfolio_project_skills")
+}
+
+// ═══════════════════════════════════════════════════════════
+// JOBS & AI MATCHING
+// ═══════════════════════════════════════════════════════════
+
+model Job {
+  id          String      @id @default(uuid()) @db.Uuid
+  recruiterId String      @map("recruiter_id") @db.Uuid
+  companyId   String?     @map("company_id") @db.Uuid
+  title       String
+  description String
+  jobType     JobType     @map("job_type")
+  location    String?
+  isRemote    Boolean     @default(false) @map("is_remote")
+
+  // ── full-time only ──
+  employmentType         EmploymentType?  @map("employment_type")
+  experienceLevel        ExperienceLevel? @map("experience_level")
+  department              String?
+  responsibilities        String?
+  salaryMin               Decimal?         @map("salary_min") @db.Decimal(12, 2)
+  salaryMax               Decimal?         @map("salary_max") @db.Decimal(12, 2)
+  salaryVisible            Boolean          @default(true) @map("salary_visible")
+  minExperienceYears       Decimal?         @map("min_experience_years") @db.Decimal(4, 1)
+  maxExperienceYears       Decimal?         @map("max_experience_years") @db.Decimal(4, 1)
+  minEducationLevel        EducationLevel?  @map("min_education_level")
+  noticePeriodPreference   NoticePeriod?    @map("notice_period_preference")
+  vacancies                Int              @default(1)
+  benefits                 String[]
+  internalJobCode          String?          @map("internal_job_code")
+
+  // ── freelance only ──
+  budget                   Decimal?              @db.Decimal(12, 2)
+  budgetType                BudgetType?          @map("budget_type")
+  deliverables               String[]
+  attachments                String[]                  @default([])
+  freelanceExperienceLevel    FreelanceExperienceLevel? @map("freelance_experience_level")
+  projectLengthEstimate       ProjectLength?           @map("project_length_estimate")
+  proposalDeadline             DateTime?               @map("proposal_deadline")
+
+  currency    String      @default("INR") @db.VarChar(3)
+  status      JobStatus   @default(DRAFT)
+  deadline    DateTime?   @db.Date
+  publishedAt DateTime?   @map("published_at")
+  viewCount   Int         @default(0) @map("view_count")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  recruiter    RecruiterProfile @relation(fields: [recruiterId], references: [id])
+  company      Company?         @relation(fields: [companyId], references: [id])
+  skills       JobSkill[]
+  weightage    AIWeightage?
+  matchScores  MatchScore[]
+  hiringStages HiringStage[]
+  applications Application[]
+  invitations  Invitation[]
+  proposals    Proposal[]
+  contracts    Contract[]
+
+  @@index([status, jobType, createdAt(sort: Desc)])
+  @@index([recruiterId, status])
+  @@map("jobs")
+}
+
+model JobSkill {
+  id          String  @id @default(uuid()) @db.Uuid
+  jobId       String  @map("job_id") @db.Uuid
+  skillId     String  @map("skill_id") @db.Uuid
+  isMandatory Boolean @default(false) @map("is_mandatory")
+  weight      Int?    @db.SmallInt
+
+  job   Job   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([jobId, skillId])
+  @@index([skillId, isMandatory])
+  @@map("job_skills")
+}
+
+// AI weightage — one table, two factor sets (full-time vs freelance), only the
+// relevant subset non-zero depending on job.jobType. skillWeight is shared.
+model AIWeightage {
+  id                 String   @id @default(uuid()) @db.Uuid
+  jobId              String   @unique @map("job_id") @db.Uuid
+
+  // shared
+  skillWeight        Int      @default(0) @map("skill_weight") @db.SmallInt
+  // full-time factors
+  experienceWeight   Int      @default(0) @map("experience_weight") @db.SmallInt
+  educationWeight    Int      @default(0) @map("education_weight") @db.SmallInt
+  domainWeight       Int      @default(0) @map("domain_weight") @db.SmallInt
+  practicalFitWeight Int      @default(0) @map("practical_fit_weight") @db.SmallInt
+  // freelance factors
+  portfolioWeight    Int      @default(0) @map("portfolio_weight") @db.SmallInt
+  rateFitWeight      Int      @default(0) @map("rate_fit_weight") @db.SmallInt
+  trackRecordWeight  Int      @default(0) @map("track_record_weight") @db.SmallInt
+  availabilityWeight Int      @default(0) @map("availability_weight") @db.SmallInt
+
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("ai_weightages")
+}
+
+model MatchScore {
+  id           String   @id @default(uuid()) @db.Uuid
+  jobId        String   @map("job_id") @db.Uuid
+  candidateId  String   @map("candidate_id") @db.Uuid
+  score        Decimal  @db.Decimal(5, 2)
+  breakdown    Json?                        // { factorName: { score, max } } pairs
+  modelVersion String?  @map("model_version")
+  isCurrent    Boolean  @default(true) @map("is_current")
+  computedAt   DateTime @default(now()) @map("computed_at")
+
+  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, candidateId, modelVersion])
+  @@index([jobId, score(sort: Desc)])
+  @@index([candidateId, score(sort: Desc)])
+  @@map("match_scores")
+}
+
+// ═══════════════════════════════════════════════════════════
+// FULL-TIME HIRING PIPELINE
+// ═══════════════════════════════════════════════════════════
+
+model HiringStage {
+  id                     String    @id @default(uuid()) @db.Uuid
+  jobId                  String    @map("job_id") @db.Uuid
+  name                   String
+  sequence               Int       @db.SmallInt
+  stageType              StageType @default(CUSTOM) @map("stage_type")
+  isTerminal             Boolean   @default(false) @map("is_terminal")
+
+  // automation — only meaningful for OA / INTERVIEW stage types
+  automationLink         String?   @map("automation_link")
+  emailSubject           String?   @map("email_subject")
+  emailBodyTemplate      String?   @map("email_body_template")
+  prerequisite           String?
+  requirementDocUrl      String?   @map("requirement_doc_url")
+  requirementDocFileName String?   @map("requirement_doc_file_name")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job           Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applications  Application[]
+  movementsFrom StageMovement[] @relation("FromStage")
+  movementsTo   StageMovement[] @relation("ToStage")
+  interviews    Interview[]
+
+  @@unique([jobId, sequence])
+  @@unique([jobId, name])
+  @@map("hiring_stages")
+}
+
+model Application {
+  id              String            @id @default(uuid()) @db.Uuid
+  jobId           String            @map("job_id") @db.Uuid
+  candidateId     String            @map("candidate_id") @db.Uuid
+  currentStageId  String?           @map("current_stage_id") @db.Uuid
+  resumeId        String?           @map("resume_id") @db.Uuid
+  status          ApplicationStatus @default(APPLIED)
+  source          ApplicationSource @default(DIRECT)
+  snapshotAiScore Decimal?          @map("snapshot_ai_score") @db.Decimal(5, 2)
+  coverNote       String?           @map("cover_note")
+  rejectionReason String?           @map("rejection_reason")
+  appliedAt       DateTime          @default(now()) @map("applied_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  job          Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate    CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  currentStage HiringStage?     @relation(fields: [currentStageId], references: [id])
+  resume       Resume?          @relation(fields: [resumeId], references: [id])
+  movements    StageMovement[]
+  interviews   Interview[]
+  offer        Offer?
+  chatRoom     ChatRoom?
+
+  @@index([jobId, status])
+  @@index([candidateId, appliedAt(sort: Desc)])
+  @@map("applications")
+}
+
+model StageMovement {
+  id            String   @id @default(uuid()) @db.Uuid
+  applicationId String   @map("application_id") @db.Uuid
+  fromStageId   String?  @map("from_stage_id") @db.Uuid
+  toStageId     String   @map("to_stage_id") @db.Uuid
+  movedByUserId String   @map("moved_by_user_id") @db.Uuid
+  note          String?
+  movedAt       DateTime @default(now()) @map("moved_at")
+
+  application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStage   HiringStage? @relation("FromStage", fields: [fromStageId], references: [id])
+  toStage     HiringStage  @relation("ToStage", fields: [toStageId], references: [id])
+  movedBy     User         @relation(fields: [movedByUserId], references: [id])
+
+  @@index([applicationId, movedAt])
+  @@map("stage_movements")
+}
+
+model Invitation {
+  id          String       @id @default(uuid()) @db.Uuid
+  jobId       String       @map("job_id") @db.Uuid
+  recruiterId String       @map("recruiter_id") @db.Uuid
+  candidateId String       @map("candidate_id") @db.Uuid
+  status      InviteStatus @default(SENT)
+  message     String?
+  expiresAt   DateTime?    @map("expires_at")
+  respondedAt DateTime?    @map("responded_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  recruiter RecruiterProfile @relation(fields: [recruiterId], references: [id])
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId, status])
+  @@index([jobId, status])
+  @@map("invitations")
+}
+
+model Offer {
+  id             String      @id @default(uuid()) @db.Uuid
+  applicationId  String      @unique @map("application_id") @db.Uuid
+  compensation   Decimal     @db.Decimal(12, 2)
+  currency       String      @default("INR") @db.VarChar(3)
+  joiningDate    DateTime?   @map("joining_date") @db.Date
+  offerLetterUrl String?     @map("offer_letter_url")
+  status         OfferStatus @default(SENT)
+  expiresAt      DateTime?   @map("expires_at")
+  respondedAt    DateTime?   @map("responded_at")
+  rejectionReason String?    @map("rejection_reason")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@map("offers")
+}
+
+model Interview {
+  id              String                   @id @default(uuid()) @db.Uuid
+  applicationId   String                   @map("application_id") @db.Uuid
+  hiringStageId   String?                  @map("hiring_stage_id") @db.Uuid
+  interviewerId   String                   @map("interviewer_id") @db.Uuid
+  roundNo         Int                      @default(1) @map("round_no") @db.SmallInt
+  scheduledAt     DateTime                 @map("scheduled_at")
+  durationMinutes Int                      @default(60) @map("duration_minutes") @db.SmallInt
+  mode            InterviewMode
+  meetingLink     String?                  @map("meeting_link")
+  location        String?
+  agendaNotes     String?                  @map("agenda_notes")
+  status          InterviewStatus          @default(SCHEDULED)
+  feedback        String?
+  commRating      Int?                     @map("comm_rating") @db.SmallInt
+  techRating      Int?                     @map("tech_rating") @db.SmallInt
+  cultureRating   Int?                     @map("culture_rating") @db.SmallInt
+  rating          Int?                     @db.SmallInt
+  recommendation  InterviewRecommendation?
+  rescheduleReason String?                 @map("reschedule_reason")
+  candidateResponse String?                @map("candidate_response")
+  submittedAt     DateTime?                @map("submitted_at")
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+
+  application Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  hiringStage HiringStage? @relation(fields: [hiringStageId], references: [id])
+  interviewer User         @relation("Interviewer", fields: [interviewerId], references: [id])
+
+  @@unique([applicationId, roundNo])
+  @@index([interviewerId, scheduledAt])
+  @@map("interviews")
+}
+
+// ═══════════════════════════════════════════════════════════
+// FREELANCE ENGAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+model Proposal {
+  id                 String         @id @default(uuid()) @db.Uuid
+  jobId              String         @map("job_id") @db.Uuid
+  candidateId        String         @map("candidate_id") @db.Uuid
+  bidAmount          Decimal        @map("bid_amount") @db.Decimal(12, 2)
+  currency           String         @default("INR") @db.VarChar(3)
+  durationDays       Int?           @map("duration_days")
+  estimatedHours     Int?           @map("estimated_hours")
+  coverLetter        String         @map("cover_letter")
+  status             ProposalStatus @default(SUBMITTED)
+  source             ProposalSource @default(DIRECT)
+  proposedMilestones Json?          @map("proposed_milestones")   // [{title,description,amount,sequence}] — becomes real Milestone rows on accept
+  rejectionReason    String?        @map("rejection_reason")
+  submittedAt        DateTime       @default(now()) @map("submitted_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+
+  job       Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate CandidateProfile @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  contract  Contract?
+
+  @@index([jobId, status])
+  @@index([candidateId, submittedAt(sort: Desc)])
+  @@map("proposals")
+}
+
+model Contract {
+  id                 String         @id @default(uuid()) @db.Uuid
+  jobId              String         @map("job_id") @db.Uuid
+  proposalId         String         @unique @map("proposal_id") @db.Uuid
+  clientId           String         @map("client_id") @db.Uuid
+  freelancerId       String         @map("freelancer_id") @db.Uuid
+  agreedAmount       Decimal        @map("agreed_amount") @db.Decimal(12, 2)
+  currency           String         @default("INR") @db.VarChar(3)
+  platformFeePercent Decimal        @map("platform_fee_percent") @db.Decimal(5, 2)
+  status             ContractStatus @default(PENDING_FUNDING)
+  startedAt          DateTime?      @map("started_at")
+  endedAt            DateTime?      @map("ended_at")
+  cancelledReason    String?        @map("cancelled_reason")
+  createdAt          DateTime       @default(now()) @map("created_at")
+
+  job          Job              @relation(fields: [jobId], references: [id])
+  proposal     Proposal         @relation(fields: [proposalId], references: [id])
+  client       RecruiterProfile @relation(fields: [clientId], references: [id])
+  freelancer   CandidateProfile @relation(fields: [freelancerId], references: [id])
+  milestones   Milestone[]
+  reviews      Review[]
+  platformFees PlatformFee[]
+  chatRoom     ChatRoom?
+
+  @@index([freelancerId, status])
+  @@index([clientId, status])
+  @@map("contracts")
+}
+
+model Milestone {
+  id          String          @id @default(uuid()) @db.Uuid
+  contractId  String          @map("contract_id") @db.Uuid
+  title       String
+  description String?
+  amount      Decimal         @db.Decimal(12, 2)
+  sequence    Int             @db.SmallInt
+  dueDate     DateTime?       @map("due_date") @db.Date
+  status      MilestoneStatus @default(PENDING)
+  approvedAt  DateTime?       @map("approved_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  contract    Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  submissions MilestoneSubmission[]
+  escrow      Escrow?
+  disputes    Dispute[]
+
+  @@unique([contractId, sequence])
+  @@index([contractId, status])
+  @@map("milestones")
+}
+
+model MilestoneSubmission {
+  id          String           @id @default(uuid()) @db.Uuid
+  milestoneId String           @map("milestone_id") @db.Uuid
+  versionNo   Int              @map("version_no") @db.SmallInt
+  note        String?
+  status      SubmissionStatus @default(SUBMITTED)
+  feedback    String?
+  submittedAt DateTime         @default(now()) @map("submitted_at")
+  reviewedAt  DateTime?        @map("reviewed_at")
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([milestoneId, versionNo])
+  @@map("milestone_submissions")
+}
+
+// Attachments are polymorphic — used by MilestoneSubmission, Message, Dispute,
+// PortfolioProject (additional images), and job requirement docs.
+model Attachment {
+  id           String              @id @default(uuid()) @db.Uuid
+  ownerType    AttachmentOwnerType @map("owner_type")
+  ownerId      String              @map("owner_id") @db.Uuid
+  uploadedById String              @map("uploaded_by") @db.Uuid
+  fileUrl      String              @map("file_url")
+  fileName     String              @map("file_name")
+  mimeType     String              @map("mime_type")
+  sizeBytes    BigInt              @map("size_bytes")
+  createdAt    DateTime            @default(now()) @map("created_at")
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([ownerType, ownerId])
+  @@map("attachments")
+}
+
+// ═══════════════════════════════════════════════════════════
+// MONEY — ESCROW, PAYMENTS, LEDGER
+// ═══════════════════════════════════════════════════════════
+
+model Escrow {
+  id          String       @id @default(uuid()) @db.Uuid
+  milestoneId String       @unique @map("milestone_id") @db.Uuid
+  paymentId   String?      @map("payment_id") @db.Uuid
+  amount      Decimal      @db.Decimal(12, 2)
+  currency    String       @default("INR") @db.VarChar(3)
+  status      EscrowStatus @default(HELD)
+  fundedAt    DateTime?    @map("funded_at")
+  releasedAt  DateTime?    @map("released_at")
+
+  milestone Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  payment   Payment?  @relation(fields: [paymentId], references: [id])
+
+  @@map("escrows")
+}
+
+model Payment {
+  id          String         @id @default(uuid()) @db.Uuid
+  payerUserId String         @map("payer_user_id") @db.Uuid
+  amount      Decimal        @db.Decimal(12, 2)
+  currency    String         @default("INR") @db.VarChar(3)
+  purpose     PaymentPurpose
+  referenceId String?        @map("reference_id") @db.Uuid
+  status      PaymentStatus  @default(INITIATED)
+  gateway     String
+  gatewayRef  String?        @unique @map("gateway_ref")
+  paidAt      DateTime?      @map("paid_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  payer       User          @relation(fields: [payerUserId], references: [id])
+  escrows     Escrow[]
+  platformFee PlatformFee?
+
+  @@index([payerUserId, createdAt(sort: Desc)])
+  @@map("payments")
+}
+
+model PlatformFee {
+  id         String   @id @default(uuid()) @db.Uuid
+  paymentId  String?  @unique @map("payment_id") @db.Uuid
+  contractId String?  @map("contract_id") @db.Uuid
+  feeType    FeeType  @map("fee_type")
+  amount     Decimal  @db.Decimal(12, 2)
+  percentage Decimal? @db.Decimal(5, 2)
+  chargedAt  DateTime @default(now()) @map("charged_at")
+
+  payment  Payment?  @relation(fields: [paymentId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@index([feeType, chargedAt])
+  @@map("platform_fees")
+}
+
+model Wallet {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @unique @map("user_id") @db.Uuid
+  availableBalance Decimal  @default(0) @map("available_balance") @db.Decimal(14, 2)
+  pendingBalance   Decimal  @default(0) @map("pending_balance") @db.Decimal(14, 2)
+  currency         String   @default("INR") @db.VarChar(3)
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  payouts      Payout[]
+
+  @@map("wallets")
+}
+
+model Transaction {
+  id            String       @id @default(uuid()) @db.Uuid
+  walletId      String       @map("wallet_id") @db.Uuid
+  direction     TxnDirection
+  amount        Decimal      @db.Decimal(12, 2)
+  balanceAfter  Decimal      @map("balance_after") @db.Decimal(14, 2)
+  referenceType String       @map("reference_type")
+  referenceId   String?      @map("reference_id") @db.Uuid
+  description   String?
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt(sort: Desc)])
+  @@map("transactions")
+}
+
+model Payout {
+  id                   String       @id @default(uuid()) @db.Uuid
+  walletId             String       @map("wallet_id") @db.Uuid
+  amount               Decimal      @db.Decimal(12, 2)
+  status               PayoutStatus @default(REQUESTED)
+  payoutMethod         PayoutMethod @map("payout_method")
+  payoutDetails        Json?        @map("payout_details")
+  payoutDetailsMasked  String?      @map("payout_details_masked")
+  gatewayRef           String?      @map("gateway_ref")
+  estimatedArrival     DateTime?    @map("estimated_arrival")
+  requestedAt          DateTime     @default(now()) @map("requested_at")
+  processedAt          DateTime?    @map("processed_at")
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, requestedAt(sort: Desc)])
+  @@map("payouts")
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMMUNICATION
+// ═══════════════════════════════════════════════════════════
+
+model ChatRoom {
+  id            String       @id @default(uuid()) @db.Uuid
+  roomType      ChatRoomType @map("room_type")
+  contractId    String?      @unique @map("contract_id") @db.Uuid
+  applicationId String?      @unique @map("application_id") @db.Uuid
+  contextLabel  String?      @map("context_label")
+  isLocked      Boolean      @default(false) @map("is_locked")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  contract     Contract?         @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  application  Application?      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages     Message[]
+
+  @@map("chat_rooms")
+}
+
+model ChatParticipant {
+  id         String    @id @default(uuid()) @db.Uuid
+  roomId     String    @map("room_id") @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  lastReadAt DateTime? @map("last_read_at")
+  joinedAt   DateTime  @default(now()) @map("joined_at")
+
+  room ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@map("chat_participants")
+}
+
+model Message {
+  id        String    @id @default(uuid()) @db.Uuid
+  roomId    String    @map("room_id") @db.Uuid
+  senderId  String?   @map("sender_id") @db.Uuid   // null for system-generated messages
+  body      String
+  isSystem  Boolean   @default(false) @map("is_system")
+  isRead    Boolean   @default(false) @map("is_read")
+  sentAt    DateTime  @default(now()) @map("sent_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  room   ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender User?    @relation(fields: [senderId], references: [id])
+
+  @@index([roomId, sentAt(sort: Desc)])
+  @@map("messages")
+}
+
+model Notification {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @map("user_id") @db.Uuid
+  type      NotificationType
+  priority  NotificationPriority @default(MEDIUM)
+  title     String
+  body      String?
+  actionUrl String?              @map("action_url")
+  isRead    Boolean              @default(false) @map("is_read")
+  createdAt DateTime             @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRUST, DISPUTES & ADMIN
+// ═══════════════════════════════════════════════════════════
+
+model Review {
+  id            String   @id @default(uuid()) @db.Uuid
+  contractId    String   @map("contract_id") @db.Uuid
+  reviewerId    String   @map("reviewer_id") @db.Uuid
+  revieweeId    String   @map("reviewee_id") @db.Uuid
+  rating        Int      @db.SmallInt
+  commRating    Int?     @map("comm_rating") @db.SmallInt
+  qualityRating Int?     @map("quality_rating") @db.SmallInt
+  comment       String?
+  isPublished   Boolean  @default(false) @map("is_published")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  reviewer User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewee User     @relation("Reviewee", fields: [revieweeId], references: [id])
+
+  @@unique([contractId, reviewerId])
+  @@index([revieweeId, isPublished])
+  @@map("reviews")
+}
+
+model Dispute {
+  id                 String        @id @default(uuid()) @db.Uuid
+  milestoneId        String        @map("milestone_id") @db.Uuid
+  raisedByUserId     String        @map("raised_by_user_id") @db.Uuid
+  assignedAdminId    String?       @map("assigned_admin_id") @db.Uuid
+  reason             String
+  status             DisputeStatus @default(OPEN)
+  resolutionNote     String?       @map("resolution_note")
+  escalationReason   String?       @map("escalation_reason")
+  amountToFreelancer Decimal?      @map("amount_to_freelancer") @db.Decimal(12, 2)
+  amountToClient     Decimal?      @map("amount_to_client") @db.Decimal(12, 2)
+  createdAt          DateTime      @default(now()) @map("created_at")
+  resolvedAt         DateTime?     @map("resolved_at")
+
+  milestone     Milestone     @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  raisedBy      User          @relation("DisputeRaiser", fields: [raisedByUserId], references: [id])
+  assignedAdmin AdminProfile? @relation(fields: [assignedAdminId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("disputes")
+}
+
+model ModerationAction {
+  id           String         @id @default(uuid()) @db.Uuid
+  targetUserId String         @map("target_user_id") @db.Uuid
+  adminId      String         @map("admin_id") @db.Uuid
+  action       ModerationType
+  reason       String
+  expiresAt    DateTime?      @map("expires_at")
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  targetUser User         @relation("ModerationTarget", fields: [targetUserId], references: [id])
+  admin      AdminProfile @relation(fields: [adminId], references: [id])
+
+  @@index([targetUserId, createdAt(sort: Desc)])
+  @@map("moderation_actions")
+}
+
+model PlatformSetting {
+  id          String        @id @default(uuid()) @db.Uuid
+  key         String        @unique
+  label       String
+  value       String
+  description String?
+  type        SettingType
+  section     SettingSection
+  updatedById String?       @map("updated_by") @db.Uuid
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  updatedBy AdminProfile? @relation(fields: [updatedById], references: [id])
+
+  @@index([section])
+  @@map("platform_settings")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id") @db.Uuid
+  action      String
+  diff        Json?
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════
+
+enum Role {
+  ADMIN
+  RECRUITER
+  CANDIDATE
+}
+enum AccountStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+enum JobType {
+  FULL_TIME
+  FREELANCE
+}
+enum BudgetType {
+  FIXED
+  HOURLY
+}
+// OQ-1 — no PENDING_PAYMENT here; the fee is account-level, not job-level
+enum JobStatus {
+  DRAFT
+  CONFIGURING
+  OPEN
+  CLOSED
+  CANCELLED
+}
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT_TO_HIRE
+}
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+enum FreelanceExperienceLevel {
+  ENTRY
+  INTERMEDIATE
+  EXPERT
+}
+enum EducationLevel {
+  ANY
+  BACHELORS
+  MASTERS
+  PHD
+}
+enum NoticePeriod {
+  IMMEDIATE
+  DAYS_15
+  DAYS_30
+  DAYS_60
+  DAYS_90
+  ANY
+}
+enum ProjectLength {
+  UNDER_1_WEEK
+  W1_4
+  M1_3
+  M3_PLUS
+}
+enum StageType {
+  SCREENING
+  OA
+  INTERVIEW
+  CUSTOM
+  OFFER
+}
+enum CandidateWorkStatus {
+  EMPLOYED
+  FREELANCING
+  OPEN_TO_WORK
+  STUDENT
+}
+enum WorkEmploymentType {
+  FULL_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+}
+enum Fluency {
+  BASIC
+  CONVERSATIONAL
+  FLUENT
+  NATIVE
+}
+enum EngagementType {
+  FIXED
+  HOURLY
+  RETAINER
+}
+enum WeeklyCapacity {
+  UNDER_10
+  H10_20
+  H20_40
+  FULL_TIME
+}
+
+enum ApplicationStatus {
+  APPLIED
+  IN_PROGRESS
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+enum ApplicationSource {
+  DIRECT
+  INVITED
+}
+enum InviteStatus {
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+enum OfferStatus {
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+enum InterviewMode {
+  ONLINE
+  PHONE
+  ONSITE
+}
+enum InterviewStatus {
+  SCHEDULED
+  RESCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+enum InterviewRecommendation {
+  PROCEED
+  HOLD
+  REJECT
+}
+
+enum ProposalStatus {
+  SUBMITTED
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+enum ProposalSource {
+  DIRECT
+  INVITED
+}
+enum ContractStatus {
+  PENDING_FUNDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+enum MilestoneStatus {
+  PENDING
+  FUNDED
+  SUBMITTED
+  REVISION_REQUESTED
+  APPROVED
+  PAID
+  DISPUTED
+}
+enum SubmissionStatus {
+  SUBMITTED
+  ACCEPTED
+  REVISION_REQUESTED
+}
+enum EscrowStatus {
+  HELD
+  FROZEN
+  RELEASED
+  REFUNDED
+}
+enum PaymentStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+enum PaymentPurpose {
+  CANDIDATE_PROFILE_FEE
+  JOB_POSTING_FEE
+  ESCROW_FUNDING
+  PAYMENT_METHOD_VERIFICATION
+}
+enum FeeType {
+  CANDIDATE_REGISTRATION
+  JOB_POSTING
+  FREELANCE_COMMISSION
+}
+enum PayoutStatus {
+  REQUESTED
+  PROCESSING
+  PAID
+  FAILED
+}
+enum PayoutMethod {
+  UPI
+  BANK_TRANSFER
+}
+enum TxnDirection {
+  CREDIT
+  DEBIT
+}
+
+enum ChatRoomType {
+  CONTRACT
+  INTERVIEW
+}
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  ESCALATED
+}
+enum ModerationType {
+  WARN
+  SUSPEND
+  BAN
+  UNBAN
+}
+enum AttachmentOwnerType {
+  MESSAGE
+  SUBMISSION
+  DISPUTE
+  PORTFOLIO
+  JOB_REQUIREMENT
+  KYC_SUBMISSION
+}
+enum KycStatus {
+  NOT_STARTED
+  PENDING
+  APPROVED
+  REJECTED
+  MANUAL_REVIEW
+}
+enum KycType {
+  INDIVIDUAL
+  BUSINESS
+}
+enum SettingType {
+  DECIMAL
+  PERCENTAGE
+  INTEGER
+  BOOLEAN
+}
+enum SettingSection {
+  FEES
+  THRESHOLDS
+  FLAGS
+  POLICY
+}
+enum NotificationType {
+  INVITE
+  APPLICATION_UPDATE
+  PROPOSAL_UPDATE
+  MILESTONE_UPDATE
+  PAYMENT
+  MESSAGE
+  DISPUTE
+  SYSTEM
+}
+enum NotificationPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  OPEN
+  RESOLVED
+}
+
+model SupportTicket {
+  id               String       @id @default(uuid()) @db.Uuid
+  userId           String       @map("user_id") @db.Uuid
+  ticketNumber     String       @unique @map("ticket_number")
+  issueType        String       @map("issue_type")
+  description      String
+  status           TicketStatus @default(OPEN)
+  adminReply       String?      @map("admin_reply")
+  repliedByAdminId String?      @map("replied_by_admin_id") @db.Uuid
+  repliedAt        DateTime?    @map("replied_at")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  user             User         @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  repliedByAdmin   User?        @relation("TicketResponder", fields: [repliedByAdminId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("support_tickets")
+}

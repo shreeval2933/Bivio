@@ -1,0 +1,607 @@
+classDiagram
+direction LR
+
+%% ========== IDENTITY & PROFILES ==========
+class User {
+  +UUID id
+  +String fullName
+  +String email
+  +String passwordHash
+  +String phone
+  +Role role
+  +String profileImage
+  +Boolean isVerified
+  +AccountStatus status
+  +DateTime createdAt
+  +login()
+  +logout()
+  +updateProfile()
+}
+
+class CandidateProfile {
+  +UUID id
+  +UUID userId
+  +String headline
+  +String location
+  +String experienceYears
+  +String education
+  +String resumeUrl
+  +Boolean fullTimeFeePaid
+  +updateResume()
+}
+
+class FreelancePortfolio {
+  +UUID id
+  +UUID candidateId
+  +String bio
+  +Double hourlyRate
+  +String portfolioUrl
+  +String github
+  +String linkedin
+  +Boolean isAvailable
+  +updatePortfolio()
+}
+
+class RecruiterProfile {
+  +UUID id
+  +UUID userId
+  +UUID companyId
+  +String designation
+  +verifyCompany()
+}
+
+class Company {
+  +UUID id
+  +String name
+  +String website
+  +String logoUrl
+  +Boolean isVerified
+}
+
+class AdminProfile {
+  +UUID id
+  +UUID userId
+  +String[] permissions
+}
+
+class Skill {
+  +UUID id
+  +String name
+}
+
+class CandidateSkill {
+  +UUID id
+  +Integer proficiency
+  +Integer yearsOfExperience
+}
+
+%% ========== JOBS ==========
+class Job {
+  +UUID id
+  +UUID recruiterId
+  +String title
+  +String description
+  +JobType type
+  +String location
+  +Double salaryMin
+  +Double salaryMax
+  +Double budget
+  +BudgetType budgetType
+  +String currency
+  +JobStatus status
+  +DateTime deadline
+  +publish()
+  +close()
+}
+
+class JobSkill {
+  +UUID id
+  +Boolean isMandatory
+  +Integer weight
+}
+
+class AIWeightage {
+  +UUID id
+  +UUID jobId
+  +Integer skillWeight
+  +Integer experienceWeight
+  +Integer educationWeight
+  +Integer projectWeight
+  +validateSumTo100()
+}
+
+class MatchScore {
+  +UUID id
+  +UUID jobId
+  +UUID candidateId
+  +Double score
+  +JSON breakdown
+  +DateTime computedAt
+  +recompute()
+}
+
+%% ========== FULL-TIME PIPELINE ==========
+class HiringStage {
+  +UUID id
+  +UUID jobId
+  +String name
+  +Integer sequence
+  +Boolean isTerminal
+}
+
+class Application {
+  +UUID id
+  +UUID jobId
+  +UUID candidateId
+  +UUID currentStageId
+  +ApplicationStatus status
+  +ApplicationSource source
+  +DateTime appliedAt
+  +submit()
+  +withdraw()
+}
+
+class StageMovement {
+  +UUID id
+  +UUID applicationId
+  +UUID fromStageId
+  +UUID toStageId
+  +UUID movedByUserId
+  +String note
+  +DateTime movedAt
+}
+
+class Invitation {
+  +UUID id
+  +UUID jobId
+  +UUID recruiterId
+  +UUID candidateId
+  +InviteStatus status
+  +String message
+  +DateTime expiresAt
+  +accept()
+  +decline()
+}
+
+class Offer {
+  +UUID id
+  +UUID applicationId
+  +Double compensation
+  +DateTime joiningDate
+  +String offerLetterUrl
+  +OfferStatus status
+  +accept()
+  +reject()
+}
+
+%% ========== FREELANCE FLOW ==========
+class Proposal {
+  +UUID id
+  +UUID jobId
+  +UUID candidateId
+  +Double bidAmount
+  +Integer durationDays
+  +String coverLetter
+  +ProposalStatus status
+  +submit()
+  +withdraw()
+}
+
+class Contract {
+  +UUID id
+  +UUID jobId
+  +UUID proposalId
+  +UUID clientId
+  +UUID freelancerId
+  +Double agreedAmount
+  +Double platformFeePercent
+  +ContractStatus status
+  +DateTime startedAt
+  +DateTime endedAt
+  +activate()
+  +complete()
+  +cancel()
+}
+
+class Milestone {
+  +UUID id
+  +UUID contractId
+  +String title
+  +String description
+  +Double amount
+  +Integer sequence
+  +DateTime dueDate
+  +MilestoneStatus status
+  +approve()
+  +requestRevision()
+}
+
+class MilestoneSubmission {
+  +UUID id
+  +UUID milestoneId
+  +String note
+  +Integer versionNo
+  +SubmissionStatus status
+  +DateTime submittedAt
+}
+
+class Attachment {
+  +UUID id
+  +String fileUrl
+  +String fileName
+  +String mimeType
+  +Long sizeBytes
+}
+
+%% ========== MONEY ==========
+class Escrow {
+  +UUID id
+  +UUID milestoneId
+  +Double amount
+  +EscrowStatus status
+  +DateTime fundedAt
+  +DateTime releasedAt
+  +deposit()
+  +release()
+  +refund()
+}
+
+class Payment {
+  +UUID id
+  +UUID payerUserId
+  +Double amount
+  +String currency
+  +PaymentPurpose purpose
+  +PaymentStatus status
+  +String gatewayRef
+  +DateTime paidAt
+  +pay()
+  +refund()
+}
+
+class PlatformFee {
+  +UUID id
+  +UUID referenceId
+  +FeeType feeType
+  +Double amount
+  +Double percentage
+  +DateTime chargedAt
+}
+
+class Wallet {
+  +UUID id
+  +UUID userId
+  +Double availableBalance
+  +Double pendingBalance
+  +String currency
+  +credit()
+  +debit()
+}
+
+class Payout {
+  +UUID id
+  +UUID walletId
+  +Double amount
+  +PayoutStatus status
+  +String payoutMethod
+  +DateTime requestedAt
+  +request()
+  +markPaid()
+}
+
+class Transaction {
+  +UUID id
+  +UUID walletId
+  +TxnDirection direction
+  +Double amount
+  +Double balanceAfter
+  +String description
+  +DateTime createdAt
+}
+
+%% ========== COMMUNICATION ==========
+class ChatRoom {
+  +UUID id
+  +UUID contractId
+  +UUID applicationId
+  +ChatRoomType type
+  +DateTime createdAt
+}
+
+class ChatParticipant {
+  +UUID id
+  +UUID userId
+  +DateTime lastReadAt
+}
+
+class Message {
+  +UUID id
+  +UUID senderId
+  +String body
+  +Boolean isRead
+  +DateTime sentAt
+  +send()
+}
+
+class Notification {
+  +UUID id
+  +UUID userId
+  +NotificationType type
+  +String title
+  +String payloadUrl
+  +Boolean isRead
+  +DateTime createdAt
+}
+
+%% ========== TRUST & ADMIN ==========
+class Review {
+  +UUID id
+  +UUID contractId
+  +UUID reviewerId
+  +UUID revieweeId
+  +Integer rating
+  +String comment
+  +Boolean isPublished
+  +DateTime createdAt
+  +submit()
+}
+
+class Dispute {
+  +UUID id
+  +UUID milestoneId
+  +UUID raisedByUserId
+  +UUID assignedAdminId
+  +String reason
+  +DisputeStatus status
+  +String resolutionNote
+  +Double amountToFreelancer
+  +Double amountToClient
+  +raise()
+  +resolve()
+}
+
+class ModerationAction {
+  +UUID id
+  +UUID targetUserId
+  +UUID adminId
+  +ModerationType action
+  +String reason
+  +DateTime expiresAt
+  +apply()
+  +revoke()
+}
+
+class PlatformSetting {
+  +UUID id
+  +String key
+  +String value
+  +String description
+  +DateTime updatedAt
+}
+
+class AuditLog {
+  +UUID id
+  +UUID actorUserId
+  +String entityType
+  +UUID entityId
+  +String action
+  +JSON diff
+  +DateTime createdAt
+}
+
+%% ========== RELATIONSHIPS ==========
+User "1" --> "0..1" CandidateProfile
+User "1" --> "0..1" RecruiterProfile
+User "1" --> "0..1" AdminProfile
+User "1" --> "1" Wallet
+User "1" --> "*" Notification
+CandidateProfile "1" --> "0..1" FreelancePortfolio
+Company "1" --> "*" RecruiterProfile
+
+CandidateProfile "1" --> "*" CandidateSkill
+Skill "1" --> "*" CandidateSkill
+Job "1" --> "*" JobSkill
+Skill "1" --> "*" JobSkill
+
+RecruiterProfile "1" --> "*" Job
+Job "1" --> "0..1" AIWeightage
+Job "1" --> "*" MatchScore
+CandidateProfile "1" --> "*" MatchScore
+
+Job "1" --> "*" HiringStage
+Job "1" --> "*" Application
+CandidateProfile "1" --> "*" Application
+Application "1" --> "*" StageMovement
+HiringStage "1" --> "*" StageMovement
+Application "1" --> "0..1" Offer
+Job "1" --> "*" Invitation
+CandidateProfile "1" --> "*" Invitation
+
+Job "1" --> "*" Proposal
+CandidateProfile "1" --> "*" Proposal
+Proposal "1" --> "0..1" Contract
+Job "1" --> "*" Contract
+Contract "1" --> "*" Milestone
+Milestone "1" --> "*" MilestoneSubmission
+MilestoneSubmission "1" --> "*" Attachment
+Message "1" --> "*" Attachment
+
+Milestone "1" --> "0..1" Escrow
+Escrow "1" --> "1" Payment
+Payment "1" --> "0..1" PlatformFee
+Wallet "1" --> "*" Transaction
+Wallet "1" --> "*" Payout
+
+Contract "1" --> "0..1" ChatRoom
+Application "1" --> "0..1" ChatRoom
+ChatRoom "1" --> "*" ChatParticipant
+ChatRoom "1" --> "*" Message
+User "1" --> "*" ChatParticipant
+
+Contract "1" --> "*" Review
+Milestone "1" --> "*" Dispute
+AdminProfile "1" --> "*" Dispute
+AdminProfile "1" --> "*" ModerationAction
+AdminProfile "1" --> "*" PlatformSetting
+User "1" --> "*" ModerationAction
+User "1" --> "*" AuditLog
+
+%% ========== ENUMS ==========
+class Role {
+  <<enumeration>>
+  ADMIN
+  RECRUITER
+  CANDIDATE
+}
+class JobType {
+  <<enumeration>>
+  FULL_TIME
+  FREELANCE
+}
+class BudgetType {
+  <<enumeration>>
+  FIXED
+  HOURLY
+}
+class JobStatus {
+  <<enumeration>>
+  DRAFT
+  PENDING_PAYMENT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+class AccountStatus {
+  <<enumeration>>
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+class ApplicationStatus {
+  <<enumeration>>
+  APPLIED
+  IN_PROGRESS
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+class ApplicationSource {
+  <<enumeration>>
+  DIRECT
+  INVITED
+}
+class InviteStatus {
+  <<enumeration>>
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+class OfferStatus {
+  <<enumeration>>
+  SENT
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+class ProposalStatus {
+  <<enumeration>>
+  SUBMITTED
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+class ContractStatus {
+  <<enumeration>>
+  PENDING_FUNDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+class MilestoneStatus {
+  <<enumeration>>
+  PENDING
+  FUNDED
+  SUBMITTED
+  APPROVED
+  REVISION_REQUESTED
+  PAID
+  DISPUTED
+}
+class SubmissionStatus {
+  <<enumeration>>
+  SUBMITTED
+  ACCEPTED
+  REVISION_REQUESTED
+}
+class EscrowStatus {
+  <<enumeration>>
+  HELD
+  RELEASED
+  REFUNDED
+  FROZEN
+}
+class PaymentStatus {
+  <<enumeration>>
+  INITIATED
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+class PaymentPurpose {
+  <<enumeration>>
+  CANDIDATE_PROFILE_FEE
+  JOB_POSTING_FEE
+  ESCROW_FUNDING
+}
+class FeeType {
+  <<enumeration>>
+  CANDIDATE_REGISTRATION
+  JOB_POSTING
+  FREELANCE_COMMISSION
+}
+class PayoutStatus {
+  <<enumeration>>
+  REQUESTED
+  PROCESSING
+  PAID
+  FAILED
+}
+class TxnDirection {
+  <<enumeration>>
+  CREDIT
+  DEBIT
+}
+class ChatRoomType {
+  <<enumeration>>
+  CONTRACT
+  INTERVIEW
+}
+class DisputeStatus {
+  <<enumeration>>
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  ESCALATED
+}
+class ModerationType {
+  <<enumeration>>
+  WARN
+  SUSPEND
+  BAN
+  UNBAN
+}
+class NotificationType {
+  <<enumeration>>
+  INVITE
+  APPLICATION_UPDATE
+  PROPOSAL_UPDATE
+  MILESTONE_UPDATE
+  PAYMENT
+  MESSAGE
+  DISPUTE
+}

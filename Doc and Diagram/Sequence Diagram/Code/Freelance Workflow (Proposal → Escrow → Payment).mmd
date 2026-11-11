@@ -1,0 +1,31 @@
+sequenceDiagram
+    actor Candidate as Freelancer
+    actor Recruiter
+    participant UI
+    participant RMS
+    participant Payment
+    participant DB
+
+    Recruiter->>UI: Create Freelance Project
+    UI->>RMS: Save Project
+    RMS->>DB: Store Project
+
+    Candidate->>UI: Submit Proposal
+    UI->>RMS: Save Proposal
+    RMS->>DB: Store Proposal
+
+    Recruiter->>UI: Accept Proposal
+    UI->>Payment: Deposit Escrow
+    Payment-->>UI: Escrow Confirmed
+
+    Candidate->>UI: Submit Milestone
+    UI->>RMS: Upload Work
+    RMS->>DB: Save Milestone
+
+    Recruiter->>UI: Approve Work
+
+    UI->>Payment: Release Payment
+    Payment-->>Candidate: Payment Transferred
+
+    Recruiter->>UI: Submit Review
+    UI->>DB: Save Review

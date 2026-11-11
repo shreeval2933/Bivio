@@ -1,0 +1,588 @@
+erDiagram
+
+%% ======================================================
+%% 1. IDENTITY & PROFILES
+%% ======================================================
+
+    USERS {
+        uuid id PK
+        string full_name
+        string email UK
+        string password_hash
+        string phone UK "nullable"
+        enum role "ADMIN|RECRUITER|CANDIDATE"
+        string profile_image_url "nullable"
+        boolean is_verified "default false"
+        enum account_status "ACTIVE|SUSPENDED|BANNED|DELETED"
+        timestamp last_login_at "nullable"
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at "nullable, soft delete"
+    }
+
+    CANDIDATE_PROFILES {
+        uuid id PK
+        uuid user_id FK,UK
+        string headline "nullable"
+        text summary "nullable"
+        string location "nullable"
+        decimal experience_years "nullable"
+        string highest_education "nullable"
+        uuid primary_resume_id FK "nullable, -> resumes"
+        boolean open_to_full_time "default true"
+        boolean open_to_freelance "default false"
+        boolean full_time_fee_paid "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    FREELANCE_PORTFOLIOS {
+        uuid id PK
+        uuid candidate_id FK,UK
+        text bio "nullable"
+        decimal hourly_rate "nullable"
+        string currency "default INR"
+        string portfolio_url "nullable, legacy"
+        string github_url "nullable"
+        string linkedin_url "nullable"
+        boolean is_available "default true"
+        decimal avg_rating "denormalized, nullable"
+        int total_contracts "default 0"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    COMPANIES {
+        uuid id PK
+        string name UK
+        string website "nullable"
+        string logo_url "nullable"
+        string industry "nullable"
+        boolean is_verified "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    RECRUITER_PROFILES {
+        uuid id PK
+        uuid user_id FK,UK
+        uuid company_id FK "nullable"
+        string designation "nullable"
+        boolean is_company_verified "default false"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ADMIN_PROFILES {
+        uuid id PK
+        uuid user_id FK,UK
+        jsonb permissions "nullable"
+        timestamp created_at
+    }
+
+    SKILLS {
+        uuid id PK
+        string name UK
+        string category "nullable"
+        boolean is_approved "default true"
+    }
+
+    CANDIDATE_SKILLS {
+        uuid id PK
+        uuid candidate_id FK
+        uuid skill_id FK
+        smallint proficiency "1-5, nullable"
+        decimal years_of_experience "nullable"
+    }
+
+%% ======================================================
+%% 2. JOBS & AI MATCHING
+%% ======================================================
+
+    JOBS {
+        uuid id PK
+        uuid recruiter_id FK
+        uuid company_id FK "nullable"
+        string title
+        text description
+        enum job_type "FULL_TIME|FREELANCE"
+        string location "nullable"
+        boolean is_remote "default false"
+        decimal salary_min "full-time only, nullable"
+        decimal salary_max "full-time only, nullable"
+        decimal budget "freelance only, nullable"
+        enum budget_type "FIXED|HOURLY, nullable"
+        string currency "default INR"
+        enum status "DRAFT|PENDING_PAYMENT|OPEN|CLOSED|CANCELLED"
+        int vacancies "default 1"
+        date deadline "nullable"
+        timestamp published_at "nullable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    JOB_SKILLS {
+        uuid id PK
+        uuid job_id FK
+        uuid skill_id FK
+        boolean is_mandatory "default false"
+        smallint weight "nullable"
+    }
+
+    AI_WEIGHTAGES {
+        uuid id PK
+        uuid job_id FK,UK
+        smallint skill_weight "0-100"
+        smallint experience_weight "0-100"
+        smallint education_weight "0-100"
+        smallint project_weight "0-100"
+        timestamp updated_at
+    }
+
+    MATCH_SCORES {
+        uuid id PK
+        uuid job_id FK
+        uuid candidate_id FK
+        decimal score "0-100"
+        jsonb breakdown "per-factor sub-scores"
+        string model_version "nullable"
+        boolean is_current "default true"
+        timestamp computed_at
+    }
+
+%% ======================================================
+%% 3. FULL-TIME HIRING PIPELINE
+%% ======================================================
+
+    HIRING_STAGES {
+        uuid id PK
+        uuid job_id FK
+        string name
+        smallint sequence
+        boolean is_terminal "default false"
+        timestamp created_at
+    }
+
+    APPLICATIONS {
+        uuid id PK
+        uuid job_id FK
+        uuid candidate_id FK
+        uuid current_stage_id FK "nullable"
+        enum status "APPLIED|IN_PROGRESS|OFFERED|HIRED|REJECTED|WITHDRAWN"
+        enum source "DIRECT|INVITED"
+        decimal snapshot_ai_score "nullable"
+        uuid resume_id FK "nullable, version sent"
+        text cover_note "nullable"
+        timestamp applied_at
+        timestamp updated_at
+    }
+
+    STAGE_MOVEMENTS {
+        uuid id PK
+        uuid application_id FK
+        uuid from_stage_id FK "nullable"
+        uuid to_stage_id FK
+        uuid moved_by_user_id FK
+        text note "nullable"
+        timestamp moved_at
+    }
+
+    INVITATIONS {
+        uuid id PK
+        uuid job_id FK
+        uuid recruiter_id FK
+        uuid candidate_id FK
+        enum status "SENT|ACCEPTED|DECLINED|EXPIRED"
+        text message "nullable"
+        timestamp expires_at "nullable"
+        timestamp responded_at "nullable"
+        timestamp created_at
+    }
+
+    OFFERS {
+        uuid id PK
+        uuid application_id FK,UK
+        decimal compensation
+        string currency "default INR"
+        date joining_date "nullable"
+        string offer_letter_url "nullable"
+        enum status "SENT|ACCEPTED|REJECTED|WITHDRAWN|EXPIRED"
+        timestamp expires_at "nullable"
+        timestamp responded_at "nullable"
+        timestamp created_at
+    }
+
+    INTERVIEWS {
+        uuid id PK
+        uuid application_id FK
+        uuid hiring_stage_id FK "nullable"
+        uuid interviewer_id FK
+        smallint round_no "default 1"
+        timestamp scheduled_at
+        smallint duration_minutes "default 60"
+        enum mode "ONLINE|PHONE|ONSITE"
+        string meeting_link "nullable, required if ONLINE"
+        string location "nullable"
+        enum status "SCHEDULED|COMPLETED|CANCELLED|NO_SHOW|RESCHEDULED"
+        text feedback "nullable"
+        smallint rating "1-5, nullable"
+        enum recommendation "PROCEED|HOLD|REJECT, nullable"
+        timestamp created_at
+    }
+
+    RESUMES {
+        uuid id PK
+        uuid candidate_id FK
+        smallint version
+        string file_url
+        string file_name
+        string mime_type
+        bigint size_bytes
+        text parsed_text "nullable, feeds matcher"
+        boolean is_primary "default false"
+        timestamp uploaded_at
+    }
+
+    PORTFOLIO_PROJECTS {
+        uuid id PK
+        uuid portfolio_id FK
+        string title
+        text description "nullable"
+        string role "nullable"
+        string repository_url "nullable"
+        string live_url "nullable"
+        string cover_image_url "nullable"
+        date started_on "nullable"
+        date completed_on "nullable"
+        smallint display_order "default 0"
+        boolean is_featured "default false"
+        timestamp created_at
+    }
+
+    PORTFOLIO_PROJECT_SKILLS {
+        uuid id PK
+        uuid project_id FK
+        uuid skill_id FK
+    }
+
+%% ======================================================
+%% 4. FREELANCE ENGAGEMENT
+%% ======================================================
+
+    PROPOSALS {
+        uuid id PK
+        uuid job_id FK
+        uuid candidate_id FK
+        decimal bid_amount
+        string currency "default INR"
+        int duration_days "nullable"
+        text cover_letter
+        enum status "SUBMITTED|SHORTLISTED|ACCEPTED|REJECTED|WITHDRAWN"
+        timestamp submitted_at
+        timestamp updated_at
+    }
+
+    CONTRACTS {
+        uuid id PK
+        uuid job_id FK
+        uuid proposal_id FK,UK
+        uuid client_id FK "recruiter_profiles.id"
+        uuid freelancer_id FK "candidate_profiles.id"
+        decimal agreed_amount
+        string currency "default INR"
+        decimal platform_fee_percent
+        enum status "PENDING_FUNDING|ACTIVE|COMPLETED|CANCELLED|DISPUTED"
+        timestamp started_at "nullable"
+        timestamp ended_at "nullable"
+        timestamp created_at
+    }
+
+    MILESTONES {
+        uuid id PK
+        uuid contract_id FK
+        string title
+        text description "nullable"
+        decimal amount
+        smallint sequence
+        date due_date "nullable"
+        enum status "PENDING|FUNDED|SUBMITTED|APPROVED|REVISION_REQUESTED|PAID|DISPUTED"
+        timestamp approved_at "nullable"
+        timestamp created_at
+    }
+
+    MILESTONE_SUBMISSIONS {
+        uuid id PK
+        uuid milestone_id FK
+        smallint version_no
+        text note "nullable"
+        enum status "SUBMITTED|ACCEPTED|REVISION_REQUESTED"
+        text feedback "nullable"
+        timestamp submitted_at
+        timestamp reviewed_at "nullable"
+    }
+
+    ATTACHMENTS {
+        uuid id PK
+        string owner_type "MESSAGE|SUBMISSION|DISPUTE|PORTFOLIO"
+        uuid owner_id "polymorphic FK"
+        uuid uploaded_by FK
+        string file_url
+        string file_name
+        string mime_type
+        bigint size_bytes
+        timestamp created_at
+    }
+
+%% ======================================================
+%% 5. PAYMENTS & LEDGER
+%% ======================================================
+
+    ESCROWS {
+        uuid id PK
+        uuid milestone_id FK,UK
+        uuid payment_id FK "nullable"
+        decimal amount
+        string currency "default INR"
+        enum status "HELD|RELEASED|REFUNDED|FROZEN"
+        timestamp funded_at "nullable"
+        timestamp released_at "nullable"
+    }
+
+    PAYMENTS {
+        uuid id PK
+        uuid payer_user_id FK
+        decimal amount
+        string currency "default INR"
+        enum purpose "CANDIDATE_PROFILE_FEE|JOB_POSTING_FEE|ESCROW_FUNDING"
+        uuid reference_id "nullable, target row"
+        enum status "INITIATED|SUCCESS|FAILED|REFUNDED"
+        string gateway
+        string gateway_ref UK "nullable"
+        timestamp paid_at "nullable"
+        timestamp created_at
+    }
+
+    PLATFORM_FEES {
+        uuid id PK
+        uuid payment_id FK "nullable"
+        uuid contract_id FK "nullable"
+        enum fee_type "CANDIDATE_REGISTRATION|JOB_POSTING|FREELANCE_COMMISSION"
+        decimal amount
+        decimal percentage "nullable"
+        timestamp charged_at
+    }
+
+    WALLETS {
+        uuid id PK
+        uuid user_id FK,UK
+        decimal available_balance "default 0"
+        decimal pending_balance "default 0"
+        string currency "default INR"
+        timestamp updated_at
+    }
+
+    TRANSACTIONS {
+        uuid id PK
+        uuid wallet_id FK
+        enum direction "CREDIT|DEBIT"
+        decimal amount
+        decimal balance_after
+        string reference_type "ESCROW|PAYOUT|FEE|REFUND"
+        uuid reference_id "nullable"
+        string description "nullable"
+        timestamp created_at
+    }
+
+    PAYOUTS {
+        uuid id PK
+        uuid wallet_id FK
+        decimal amount
+        enum status "REQUESTED|PROCESSING|PAID|FAILED"
+        string payout_method
+        jsonb payout_details "masked bank/UPI"
+        string gateway_ref "nullable"
+        timestamp requested_at
+        timestamp processed_at "nullable"
+    }
+
+%% ======================================================
+%% 6. COMMUNICATION
+%% ======================================================
+
+    CHAT_ROOMS {
+        uuid id PK
+        enum room_type "CONTRACT|INTERVIEW"
+        uuid contract_id FK "nullable"
+        uuid application_id FK "nullable"
+        boolean is_locked "default false"
+        timestamp created_at
+    }
+
+    CHAT_PARTICIPANTS {
+        uuid id PK
+        uuid room_id FK
+        uuid user_id FK
+        timestamp last_read_at "nullable"
+        timestamp joined_at
+    }
+
+    MESSAGES {
+        uuid id PK
+        uuid room_id FK
+        uuid sender_id FK
+        text body
+        boolean is_read "default false"
+        timestamp sent_at
+        timestamp deleted_at "nullable"
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid user_id FK
+        enum type "INVITE|APPLICATION_UPDATE|PROPOSAL_UPDATE|MILESTONE_UPDATE|PAYMENT|MESSAGE|DISPUTE"
+        string title
+        text body "nullable"
+        string action_url "nullable"
+        boolean is_read "default false"
+        timestamp created_at
+    }
+
+%% ======================================================
+%% 7. TRUST, DISPUTES & ADMIN
+%% ======================================================
+
+    REVIEWS {
+        uuid id PK
+        uuid contract_id FK
+        uuid reviewer_id FK
+        uuid reviewee_id FK
+        smallint rating "1-5"
+        text comment "nullable"
+        boolean is_published "default false"
+        timestamp created_at
+    }
+
+    DISPUTES {
+        uuid id PK
+        uuid milestone_id FK
+        uuid raised_by_user_id FK
+        uuid assigned_admin_id FK "nullable"
+        text reason
+        enum status "OPEN|UNDER_REVIEW|RESOLVED|ESCALATED"
+        text resolution_note "nullable"
+        decimal amount_to_freelancer "nullable"
+        decimal amount_to_client "nullable"
+        timestamp created_at
+        timestamp resolved_at "nullable"
+    }
+
+    MODERATION_ACTIONS {
+        uuid id PK
+        uuid target_user_id FK
+        uuid admin_id FK
+        enum action "WARN|SUSPEND|BAN|UNBAN"
+        text reason
+        timestamp expires_at "nullable"
+        timestamp created_at
+    }
+
+    PLATFORM_SETTINGS {
+        uuid id PK
+        string key UK
+        string value
+        string description "nullable"
+        uuid updated_by FK "nullable"
+        timestamp updated_at
+    }
+
+    AUDIT_LOGS {
+        uuid id PK
+        uuid actor_user_id FK "nullable"
+        string entity_type
+        uuid entity_id
+        string action
+        jsonb diff "nullable"
+        string ip_address "nullable"
+        timestamp created_at
+    }
+
+%% ======================================================
+%% RELATIONSHIPS
+%% ======================================================
+
+    USERS ||--o| CANDIDATE_PROFILES : "has"
+    USERS ||--o| RECRUITER_PROFILES : "has"
+    USERS ||--o| ADMIN_PROFILES : "has"
+    USERS ||--|| WALLETS : "owns"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+    USERS ||--o{ ATTACHMENTS : "uploads"
+    USERS ||--o{ AUDIT_LOGS : "generates"
+
+    CANDIDATE_PROFILES ||--o| FREELANCE_PORTFOLIOS : "extends with"
+    CANDIDATE_PROFILES ||--o{ CANDIDATE_SKILLS : "declares"
+    CANDIDATE_PROFILES ||--o{ RESUMES : "versions"
+    RESUMES ||--o{ APPLICATIONS : "attached to"
+    FREELANCE_PORTFOLIOS ||--o{ PORTFOLIO_PROJECTS : "showcases"
+    PORTFOLIO_PROJECTS ||--o{ PORTFOLIO_PROJECT_SKILLS : "built with"
+    SKILLS ||--o{ PORTFOLIO_PROJECT_SKILLS : "referenced by"
+    SKILLS ||--o{ CANDIDATE_SKILLS : "referenced by"
+    SKILLS ||--o{ JOB_SKILLS : "referenced by"
+
+    COMPANIES ||--o{ RECRUITER_PROFILES : "employs"
+    COMPANIES ||--o{ JOBS : "posts under"
+    RECRUITER_PROFILES ||--o{ JOBS : "creates"
+
+    JOBS ||--o{ JOB_SKILLS : "requires"
+    JOBS ||--o| AI_WEIGHTAGES : "scored by"
+    JOBS ||--o{ MATCH_SCORES : "ranks"
+    CANDIDATE_PROFILES ||--o{ MATCH_SCORES : "scored in"
+
+    JOBS ||--o{ HIRING_STAGES : "defines"
+    JOBS ||--o{ APPLICATIONS : "receives"
+    CANDIDATE_PROFILES ||--o{ APPLICATIONS : "submits"
+    HIRING_STAGES ||--o{ APPLICATIONS : "currently holds"
+    APPLICATIONS ||--o{ STAGE_MOVEMENTS : "logs"
+    HIRING_STAGES ||--o{ STAGE_MOVEMENTS : "transitions"
+    APPLICATIONS ||--o| OFFERS : "results in"
+    APPLICATIONS ||--o{ INTERVIEWS : "scheduled as"
+    HIRING_STAGES ||--o{ INTERVIEWS : "belongs to round"
+    USERS ||--o{ INTERVIEWS : "conducts"
+
+    JOBS ||--o{ INVITATIONS : "invites for"
+    RECRUITER_PROFILES ||--o{ INVITATIONS : "sends"
+    CANDIDATE_PROFILES ||--o{ INVITATIONS : "receives"
+
+    JOBS ||--o{ PROPOSALS : "receives"
+    CANDIDATE_PROFILES ||--o{ PROPOSALS : "bids with"
+    PROPOSALS ||--o| CONTRACTS : "converts to"
+    JOBS ||--o{ CONTRACTS : "governs"
+    RECRUITER_PROFILES ||--o{ CONTRACTS : "hires as client"
+    CANDIDATE_PROFILES ||--o{ CONTRACTS : "works as freelancer"
+
+    CONTRACTS ||--|{ MILESTONES : "split into"
+    MILESTONES ||--o{ MILESTONE_SUBMISSIONS : "delivered via"
+    MILESTONES ||--o| ESCROWS : "funded by"
+    ESCROWS }o--o| PAYMENTS : "settled by"
+    PAYMENTS ||--o| PLATFORM_FEES : "yields"
+    CONTRACTS ||--o{ PLATFORM_FEES : "commissioned on"
+    USERS ||--o{ PAYMENTS : "pays"
+
+    WALLETS ||--o{ TRANSACTIONS : "records"
+    WALLETS ||--o{ PAYOUTS : "withdraws via"
+
+    CONTRACTS ||--o| CHAT_ROOMS : "has thread"
+    APPLICATIONS ||--o| CHAT_ROOMS : "has thread"
+    CHAT_ROOMS ||--|{ CHAT_PARTICIPANTS : "includes"
+    USERS ||--o{ CHAT_PARTICIPANTS : "joins as"
+    CHAT_ROOMS ||--o{ MESSAGES : "contains"
+    USERS ||--o{ MESSAGES : "sends"
+
+    CONTRACTS ||--o{ REVIEWS : "rated by"
+    USERS ||--o{ REVIEWS : "writes"
+
+    MILESTONES ||--o{ DISPUTES : "contested in"
+    USERS ||--o{ DISPUTES : "raises"
+    ADMIN_PROFILES ||--o{ DISPUTES : "resolves"
+    ADMIN_PROFILES ||--o{ MODERATION_ACTIONS : "issues"
+    USERS ||--o{ MODERATION_ACTIONS : "targeted by"
+    ADMIN_PROFILES ||--o{ PLATFORM_SETTINGS : "configures"
